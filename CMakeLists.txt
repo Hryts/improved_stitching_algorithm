@@ -12,11 +12,11 @@ find_package (Eigen3 3.3 REQUIRED NO_MODULE)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_FLAGS_RELEASE "-O3")
 
-#if (MSVC)
-#    add_compile_options(/W4 /WX)
-#else()
-#    add_compile_options(-Wall -Wextra -pedantic -Werror)
-#endif()
+if (MSVC)
+    add_compile_options(/W4 /WX)
+else()
+    add_compile_options(-Wall -Wextra -pedantic -Werror)
+endif()
 
 
 add_executable(improvedStitching
@@ -24,6 +24,7 @@ add_executable(improvedStitching
         include/Stitching/Stitcher.h
         src/Stitcher.cpp
         src/KDTree.h
-        )
+        src/LMOptimizer.h
+        src/MyLMOptimizer.h)
 
 target_link_libraries( improvedStitching ${OpenCV_LIBS} Eigen3::Eigen)
