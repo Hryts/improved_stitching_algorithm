@@ -41,14 +41,16 @@ size_t euclidianDistanceSquared(const Eigen::Vector3d& point1, const Eigen::Vect
 
 Eigen::Matrix3d Stitcher::computeTransformationMatrix(const size_t image1, const size_t image2)
 {
+	m_matching_pairs.clear();
     Eigen::Matrix3d result;
     getAffineTransformation(image1, image2, result);
 //	result << 1.01008, -8.87567e-05, 153.888, 0.0122352, 1.0044, -7.28397, 0, 0, 1;
 
-    std::cout << "affine matrix: " << std::endl;
-    std::cout << result << std::endl << "affine det: " << result.determinant()   << std::endl << std::endl;
+//    std::cout << "affine matrix: " << std::endl;
+//    std::cout << result << std::endl;
+    std::cout << "affine det: " << result.determinant();
 
-    std::cout << std::endl << "n of pairs: " << m_matching_pairs.size() << std::endl;
+    std::cout << std::endl << "\t\tn of pairs: " << m_matching_pairs.size() << std::endl;
 
 	std::vector<std::pair<Eigen::Vector2d , Eigen::Vector2d >> measured_values;
 	auto ref_image_keypoints = std::get<ImageDescribedGetter::KEYPOINTS>(m_described_images[image1]);
@@ -83,13 +85,12 @@ Eigen::Matrix3d Stitcher::computeTransformationMatrix(const size_t image1, const
 
 	result = lm_optimizer.optimize();
 
-	std::cout << "measured_values.size(): " << measured_values.size() << std::endl;
-	std::cout << std::endl << "new number of inliers: "
+	std::cout << "measured_values.size(): " << measured_values.size() << " \t\tnew number of inliers: "
 	<< countInliersNumber(m_matching_pairs,
 	                      m_described_images[image1],
 	                      m_described_images[image2],
 					      result)
-	<< std::endl;
+	<< "\t det: " << result.determinant() << std::endl;
 
     return result;
 }
@@ -314,15 +315,77 @@ bool Stitcher::areCollinear(const Eigen::Matrix3d& vectors, const Eigen::Matrix2
 	return false;
 }
 
-cv::Mat Stitcher::warp(size_t image1_index, size_t image2_index, Eigen::Matrix3d& eigen_homography)
+cv::Mat Stitcher::warp(cv::Mat& image1, cv::Mat& image2, Eigen::Matrix3d& eigen_homography)
 {
-	cv::Mat& image1 = std::get<ImageDescribedGetter::IMAGE>(m_described_images[image1_index]);
-	cv::Mat& image2 = std::get<ImageDescribedGetter::IMAGE>(m_described_images[image2_index]);
+	imwrite("../images/debug.jpg", image1);
+
 	cv::Mat result;
 	cv::Mat cv_homography;
 	cv::eigen2cv(eigen_homography, cv_homography);
-	warpPerspective(image2,result,cv_homography,cv::Size(image1.cols + image2.cols,image2.rows+image2.rows));
-	cv::Mat half(result,cv::Rect(0,0,image1.cols,image2.rows));
-	image1.copyTo(half);
+	double result_height = image1.rows;
+
+	cv::warpPerspective(image2, result, cv_homography,cv::Size(image1.cols + image2.cols, result_height));
+
+	cv::Mat roi_for_image1(result,cv::Rect(0, 0, image1.cols, image1.rows));
+	image1.copyTo(roi_for_image1);
+
+	imwrite("../images/debug.jpg", result);
+
+	// crop result
+	Eigen::Vector3d top_right(image2.cols, 0, 1);
+	Eigen::Vector3d low_right(image2.cols,image2.rows, 1);
+	top_right = eigen_homography * top_right;
+	low_right = eigen_homography * low_right;
+
+	double right_bound = std::fminf(top_right(0), low_right(0));
+	cv::Rect roi_for_crop(0, 0, right_bound, result_height);
+	cv::Mat cropped_result = result(roi_for_crop);
+
+	imwrite("../images/debug.jpg", cropped_result);
+
+
+	return cropped_result;
+}
+
+cv::Mat Stitcher::stitchAll()
+{
+	calculateTransformations();
+	cv::Mat result = std::get<ImageDescribedGetter::IMAGE>(m_described_images[0]);
+
+	for (size_t i = 1; i < m_described_images.size(); ++i) {
+		cv::Mat inp = std::get<ImageDescribedGetter::IMAGE>(m_described_images[i]);
+		result = warp(result, inp, m_transformations[i-1]);
+	}
 	return result;
+}
+
+void Stitcher::calculateAdjacentTransformations(std::vector<Eigen::Matrix3d>& result)
+{
+	for (size_t image_index = 1; image_index < m_described_images.size(); ++image_index)
+	{
+		result.emplace_back(computeTransformationMatrix(image_index - 1, image_index));
+	}
+}
+
+void Stitcher::calculateTransformations()
+{
+	std::vector<Eigen::Matrix3d> adjacent_transformations;
+	calculateAdjacentTransformations(adjacent_transformations);
+
+	m_transformations = adjacent_transformations;
+
+	if (m_transformations.size() == 1)
+		return;
+
+	for (size_t i = 1; i < m_transformations.size(); ++i) {
+		m_transformations[i] = m_transformations[i - 1] * m_transformations[i];
+	}
+}
+
+cv::Mat Stitcher::warp_public(size_t im1, size_t im2, Eigen::Matrix3d& eigen_homography)
+{
+	cv::Mat i1 = std::get<ImageDescribedGetter::IMAGE>(m_described_images[im1]);
+	cv::Mat i2 = std::get<ImageDescribedGetter::IMAGE>(m_described_images[im2]);
+	return warp(i1, i2, eigen_homography);
+
 }
