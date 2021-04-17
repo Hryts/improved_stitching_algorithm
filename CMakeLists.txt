@@ -25,6 +25,6 @@ add_executable(improvedStitching
         src/Stitcher.cpp
         src/KDTree.h
         src/LMOptimizer.h
-        src/MyLMOptimizer.h)
+        src/MyLMOptimizer.h src/StitcherHelper.cpp src/StitcherHelper.h)
 
 target_link_libraries( improvedStitching ${OpenCV_LIBS} Eigen3::Eigen)
