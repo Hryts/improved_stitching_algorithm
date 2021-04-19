@@ -154,7 +154,7 @@ StitcherHelper::mean(const std::vector<double >& values)
 }
 
 cv::Mat
-StitcherHelper::warp(cv::Mat& image1, cv::Mat& image2, Eigen::Matrix3d& eigen_homography)
+StitcherHelper::warp_to_right(cv::Mat& image1, cv::Mat& image2, Eigen::Matrix3d& eigen_homography)
 {
 	cv::Mat result;
 	cv::Mat cv_homography;

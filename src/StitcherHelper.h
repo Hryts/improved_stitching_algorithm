@@ -37,7 +37,7 @@ public:
 
 	static double mean(const std::vector<double>& values);
 
-	static cv::Mat warp(cv::Mat& image1, cv::Mat& image2, Eigen::Matrix3d& eigen_homography);
+	static cv::Mat warp_to_right(cv::Mat& image1, cv::Mat& image2, Eigen::Matrix3d& eigen_homography);
 };
 
 

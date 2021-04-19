@@ -136,7 +136,7 @@ Stitcher::stitchAll()
 
 	for (size_t i = 1; i < m_described_images.size(); ++i) {
 		cv::Mat inp = get_image(m_described_images[i]);
-		result = StitcherHelper::warp(result, inp, m_transformations[i-1]);
+		result = StitcherHelper::warp_to_right(result, inp, m_transformations[i - 1]);
 	}
 	return result;
 }
@@ -162,7 +162,8 @@ Stitcher::calculateTransformations()
 	if (m_transformations.size() == 1)
 		return;
 
-	for (size_t i = 1; i < m_transformations.size(); ++i) {
+	for (size_t i = 1; i < m_transformations.size(); ++i)
+	{
 		m_transformations[i] = m_transformations[i - 1] * m_transformations[i];
 	}
 }
@@ -213,5 +214,15 @@ Stitcher::filter_matching_pairs(size_t image1,
 					               Eigen::Vector2d (inp_coordinates.x, inp_coordinates.y)));
 		}
 	}
+	return result;
+}
+
+cv::Mat
+Stitcher::drawKeypoints(size_t image_index)
+{
+	cv::Mat image = get_image(m_described_images[image_index]);
+	KeypointsVector keypoints = get_keypoints(m_described_images[image_index]);
+	cv::Mat result;
+	cv::drawKeypoints(image, keypoints, result);
 	return result;
 }

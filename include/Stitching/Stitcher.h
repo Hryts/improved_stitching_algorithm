@@ -35,6 +35,8 @@ public:
 
     cv::Mat stitchAll();
 
+    cv::Mat drawKeypoints(size_t image_index);
+
 private:
     cv::Ptr<cv::Feature2D> m_sift;
 
@@ -51,7 +53,8 @@ private:
 
     void getAffineTransformation(size_t reference_image_index, size_t new_input_image_index,
 								 Eigen::Matrix3d& result,
-                                 size_t number_of_iterations=1500, size_t number_of_matching_pairs=3);
+                                 size_t number_of_iterations = 1500,
+                                 size_t number_of_matching_pairs = 3);
 
 	std::vector<std::pair<Eigen::Vector2d , Eigen::Vector2d>> filter_matching_pairs(
 								 size_t image1,
